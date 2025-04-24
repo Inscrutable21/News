@@ -1,8 +1,6 @@
-// prisma/schema.prisma
-
 datasource db {
   provider = "mongodb"
-  url      = env("DATABASE_URL") // MongoDB connection URL from your environment variables
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -10,8 +8,9 @@ generator client {
 }
 
 model UserPreferences {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String
-  interests         String[] // Array of strings representing user interests (e.g., 'finance', 'technology')
-  preferencesTimestamp DateTime @default(now())
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                String
+  interests             String[]  // Array of strings representing user interests
+  preferencesTimestamp  DateTime @default(now())
+  newsCategory          String[]  // Array to track preferred news categories
 }

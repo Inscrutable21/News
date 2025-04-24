@@ -1,36 +1,27 @@
-// pages/api/preferences.js
-import { prisma, disconnect } from '../../lib/prisma';
-import logger from '../../lib/logger';
-import { validateUserId, validateInterests } from '../../utils/validateUser';
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: "Method Not Allowed" });
-  }
-
-  const { userId, interests } = req.body;
-
-  if (!userId || !validateUserId(userId)) {
-    return res.status(400).json({ message: "Invalid user ID" });
-  }
-
-  if (!interests || !validateInterests(interests)) {
-    return res.status(400).json({ message: "Invalid interests" });
-  }
+  const { userId, preferences, categories } = req.body;
 
   try {
-    // Upsert user preferences (create or update)
-    const userPreferences = await prisma.userPreferences.upsert({
+    // Create or update user preferences
+    const updatedPreferences = await prisma.userPreferences.upsert({
       where: { userId },
-      update: { interests },
-      create: { userId, interests },
+      update: {
+        interests: preferences,
+        newsCategory: categories,
+      },
+      create: {
+        userId,
+        interests: preferences,
+        newsCategory: categories,
+      },
     });
 
-    res.status(200).json(userPreferences);
+    res.status(200).json(updatedPreferences);
   } catch (error) {
-    logger.error("Error updating preferences: ", error);
-    res.status(500).json({ message: "Internal server error" });
-  } finally {
-    await disconnect();
+    console.error('Error updating preferences:', error);
+    res.status(500).json({ error: 'Failed to update preferences' });
   }
 }

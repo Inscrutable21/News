@@ -1,110 +1,221 @@
 import { useState, useEffect } from 'react';
 
-const Home = () => {
-  const [userId, setUserId] = useState('user123'); // For now, we're using a fixed userId
-  const [news, setNews] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+interface NewsArticle {
+  title: string;
+  description: string;
+  url: string;
+  urlToImage?: string;
+  publishedAt?: string;
+  source?: {
+    name: string;
+  };
+}
 
-  // Fetch news when the component mounts
+export default function Home() {
+  // State for news articles
+  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  // User preferences state
+  const [userPreferences, setUserPreferences] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'category' | 'personalized' | 'random'>('personalized');
+  
+  // Available categories
+  const categories = ['technology', 'science', 'business', 'entertainment', 'health', 'sports', 'politics'];
+
+  // Load user preferences from localStorage on initial load
+  useEffect(() => {
+    const savedPreferences = localStorage.getItem('newsPreferences');
+    if (savedPreferences) {
+      setUserPreferences(JSON.parse(savedPreferences));
+    } else {
+      // Default preferences if none saved
+      const defaultPreferences = ['technology', 'science'];
+      setUserPreferences(defaultPreferences);
+      localStorage.setItem('newsPreferences', JSON.stringify(defaultPreferences));
+    }
+  }, []);
+
+  // Save preferences when they change
+  useEffect(() => {
+    if (userPreferences.length > 0) {
+      localStorage.setItem('newsPreferences', JSON.stringify(userPreferences));
+    }
+  }, [userPreferences]);
+
+  // Fetch news based on current view mode and selection
   useEffect(() => {
     const fetchNews = async () => {
-      if (!userId) {
-        setError("User ID is required.");
-        return;
-      }
-
-      setLoading(true);
-      setError(null); // Reset previous errors
-
+      setIsLoading(true);
       try {
-        const response = await fetch(`/api/news?userId=${userId}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch news');
+        let endpoint = '/api/news';
+        let queryParams = '';
+
+        if (viewMode === 'category' && selectedCategory) {
+          // Fetch news for specific category
+          queryParams = `?preferences=${selectedCategory}`;
+        } else if (viewMode === 'personalized') {
+          // Fetch personalized news based on user preferences
+          queryParams = `?preferences=${userPreferences.join(',')}`;
+        } else if (viewMode === 'random') {
+          // Fetch random news from all categories
+          queryParams = '?random=true';
         }
 
+        const response = await fetch(`${endpoint}${queryParams}`);
         const data = await response.json();
-        setNews(data); // Set the news data
-      } catch (err) {
-        setError("Error fetching news. Please try again later.");
-        console.error(err); // Log the error
+        setNews(data);
+      } catch (error) {
+        console.error('Error fetching news:', error);
       } finally {
-        setLoading(false); // Stop loading
+        setIsLoading(false);
       }
     };
 
     fetchNews();
-  }, [userId]); // Re-fetch when userId changes
+  }, [viewMode, selectedCategory, userPreferences]);
+
+  // Toggle category in user preferences
+  const togglePreference = (category: string) => {
+    if (userPreferences.includes(category)) {
+      setUserPreferences(userPreferences.filter(pref => pref !== category));
+    } else {
+      setUserPreferences([...userPreferences, category]);
+    }
+  };
+
+  // Handle category selection
+  const selectCategory = (category: string) => {
+    setSelectedCategory(category);
+    setViewMode('category');
+  };
+
+  // Switch to personalized view
+  const showPersonalized = () => {
+    setViewMode('personalized');
+    setSelectedCategory('');
+  };
+
+  // Switch to random news view
+  const showRandom = () => {
+    setViewMode('random');
+    setSelectedCategory('');
+  };
 
   return (
     <div className="container">
-      <h1>Personalized News Feed</h1>
+      <div className="header">
+        <h1>Microsoft News</h1>
+      </div>
       
-      {/* User Input for `userId` (You can later replace this with an actual user authentication) */}
-      <div>
-        <label htmlFor="userId">User ID:</label>
-        <input
-          id="userId"
-          type="text"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)} // Update userId state
-          placeholder="Enter your user ID"
-        />
+      {/* View mode selection */}
+      <div className="viewModeSection">
+        <h2>View Mode</h2>
+        <div className="categoryButtons">
+          <button 
+            className={`ms-button ${viewMode === 'personalized' ? 'active' : ''}`}
+            onClick={showPersonalized}
+          >
+            My News
+          </button>
+          <button 
+            className={`ms-button ${viewMode === 'random' ? 'active' : ''}`}
+            onClick={showRandom}
+          >
+            Random
+          </button>
+          {selectedCategory && (
+            <button 
+              className={`ms-button ${viewMode === 'category' ? 'active' : ''}`}
+            >
+              {selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Categories */}
+      <div className="categorySection">
+        <h2>Categories</h2>
+        <div className="categoryButtons">
+          {categories.map((category) => (
+            <button 
+              key={category}
+              className={`ms-button ${selectedCategory === category && viewMode === 'category' ? 'active' : ''}`}
+              onClick={() => selectCategory(category)}
+            >
+              {category.charAt(0).toUpperCase() + category.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      {/* User preferences */}
+      <div className="preferencesSection">
+        <h2>My Interests</h2>
+        <p className="preferencesNote">Select topics you're interested in to personalize your feed:</p>
+        <div className="categoryButtons">
+          {categories.map((category) => (
+            <button 
+              key={`pref-${category}`}
+              className={`ms-button ${userPreferences.includes(category) ? 'active' : ''}`}
+              onClick={() => togglePreference(category)}
+            >
+              {category.charAt(0).toUpperCase() + category.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Loading, Error, and News Display */}
-      {loading && <p>Loading...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-
-      {/* Display News Articles */}
-      <div>
-        {news.length > 0 ? (
-          news.map((article, idx) => (
-            <div key={idx} className="news-article">
-              <h2>{article.title}</h2>
-              <p>{article.description}</p>
-              <a href={article.url} target="_blank" rel="noopener noreferrer">
-                Read more
-              </a>
-            </div>
-          ))
-        ) : (
-          !loading && <p>No news available for your interests.</p>
-        )}
+      {/* News display */}
+      <div className="newsHeader">
+        <h2>
+          {viewMode === 'personalized' && 'Personalized For You'}
+          {viewMode === 'random' && 'Random News'}
+          {viewMode === 'category' && `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} News`}
+        </h2>
       </div>
-
-      {/* Styling for the page */}
-      <style jsx>{`
-        .container {
-          max-width: 900px;
-          margin: 0 auto;
-          padding: 20px;
-        }
-
-        h1 {
-          text-align: center;
-        }
-
-        .news-article {
-          margin: 20px 0;
-          padding: 15px;
-          border: 1px solid #ddd;
-          border-radius: 5px;
-        }
-
-        input {
-          padding: 8px;
-          margin: 10px 0;
-          width: 200px;
-        }
-
-        label {
-          margin-right: 10px;
-        }
-      `}</style>
+      
+      {isLoading ? (
+        <div className="loadingState">Loading news...</div>
+      ) : (
+        <div className="newsContainer">
+          {news.length > 0 ? (
+            news.map((article, index) => (
+              <div key={index} className="newsArticle">
+                {article.urlToImage && (
+                  <img 
+                    src={article.urlToImage} 
+                    alt={article.title} 
+                    className="articleImage"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                )}
+                <div className="articleContent">
+                  {article.source?.name && (
+                    <div className="articleSource">{article.source.name}</div>
+                  )}
+                  <h3>{article.title}</h3>
+                  <p>{article.description}</p>
+                  <a 
+                    href={article.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="articleLink"
+                  >
+                    Read more
+                  </a>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="noNewsMessage">No articles found. Try selecting different categories.</div>
+          )}
+        </div>
+      )}
     </div>
   );
-};
-
-export default Home;
+}

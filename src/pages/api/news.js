@@ -1,37 +1,26 @@
-// pages/api/news.js
-import { prisma, disconnect } from '../../lib/prisma';
-import { getNewsByCategory } from '../../lib/newsAPI';
-import { validateUserId } from '../../utils/validateUser';
+const { fetchPersonalizedNews, fetchGeneralNews, fetchRandomNews } = require('../../lib/newsAPI');
 
 export default async function handler(req, res) {
-  const { userId } = req.query;
-
-  if (!userId || !validateUserId(userId)) {
-    return res.status(400).json({ message: "Invalid or missing user ID" });
-  }
-
   try {
-    // Fetch user preferences from the database using the unique userId
-    const userPreferences = await prisma.userPreferences.findUnique({
-      where: { userId },  // Now that userId is unique, we can use it here
-    });
+    const { preferences, random } = req.query;
 
-    if (!userPreferences) {
-      return res.status(404).json({ message: "User preferences not found" });
+    let articles;
+
+    if (random === 'true') {
+      // Fetch random news with a bias toward user preferences if available
+      const userPrefs = preferences ? preferences.split(',') : [];
+      articles = await fetchRandomNews(userPrefs);
+    } else if (preferences && preferences.length > 0) {
+      // Fetch personalized news based on specific preferences
+      articles = await fetchPersonalizedNews(preferences.split(','));
+    } else {
+      // Fetch general news
+      articles = await fetchGeneralNews();
     }
 
-    // Fetch news for each of the user's interests
-    const newsPromises = userPreferences.interests.map((interest) =>
-      getNewsByCategory(interest)
-    );
-    const newsResults = await Promise.all(newsPromises);
-    const allNews = newsResults.flat();
-
-    res.status(200).json(allNews);
+    res.status(200).json(articles);
   } catch (error) {
-    console.error("Error fetching news: ", error); // Use console.error for simple error logging
-    res.status(500).json({ message: "Internal server error" });
-  } finally {
-    await disconnect(); // Disconnect Prisma client to release resources
+    console.error('Error fetching news:', error);
+    res.status(500).json({ error: 'Failed to fetch news' });
   }
 }
