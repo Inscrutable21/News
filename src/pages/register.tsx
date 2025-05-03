@@ -21,7 +21,8 @@ export default function Register() {
     
     // Listen for changes in color scheme preference
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => setIsDarkMode(e.matches);
+    // Replace line 24
+    const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
     mediaQuery.addEventListener('change', handleChange);
     
     return () => mediaQuery.removeEventListener('change', handleChange);
