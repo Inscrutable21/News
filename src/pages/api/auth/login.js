@@ -34,8 +34,22 @@ export default async function handler(req, res) {
     // Set auth cookie
     setAuthCookie(res, user);
 
+    // In the existing login.js file, update the successful login section:
+    
+    // After line 30 (after setAuthCookie(res, user);)
+    // Add this code to also set the session:
+    if (req.session) {
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      };
+      await req.session.commit();
+    }
+    
     // Log for debugging
-    console.log('Login successful:', {
+    console.log('Login successful - Session and JWT set:', {
       id: user.id,
       email: user.email,
       role: user.role

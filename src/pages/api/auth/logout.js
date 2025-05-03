@@ -1,7 +1,19 @@
+// pages/api/auth/logout.js
 import nextSession from 'next-session';
+import { clearAuthCookie } from '../../../lib/auth';
 
-// Initialize session handler
-const getSession = nextSession();
+// Initialize session handler with consistent configuration
+const getSession = nextSession({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 7, // 1 week
+    path: '/',
+    sameSite: 'lax',
+  },
+  autoCommit: true,
+  name: 'news-session',
+});
 
 export default async function handler(req, res) {
   // Apply session middleware
@@ -15,12 +27,10 @@ export default async function handler(req, res) {
     // Clear the user from session
     if (req.session) {
       req.session.user = null;
-      
-      // Save session if the method exists
-      if (req.session.save) {
-        await req.session.save();
-      }
     }
+    
+    // Also clear the auth cookie
+    clearAuthCookie(res);
 
     return res.status(200).json({ success: true });
   } catch (error) {

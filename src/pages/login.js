@@ -28,13 +28,21 @@ export default function Login() {
         throw new Error(data.message || 'Login failed');
       }
   
+      // In the handleSubmit function
+      // In the handleSubmit function, after successful login:
+      // In the handleSubmit function, update the redirect code:
+  
       console.log('Login successful, redirecting');
-      
-      if (data.role === 'admin') {
-        window.location.href = '/admin/dashboard';
-      } else {
-        window.location.href = '/';
-      }
+  
+      // Add a small delay to ensure cookies are set
+      setTimeout(() => {
+        if (data.role === 'admin') {
+          window.location.href = '/admin/dashboard';
+        } else {
+          // Force a full page reload to ensure fresh state
+          window.location.href = '/';
+        }
+      }, 100);
     } catch (error) {
       console.error('Login error:', error);
       setError(error.message);

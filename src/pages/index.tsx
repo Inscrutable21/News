@@ -29,6 +29,7 @@ export default function Home() {
   // Authentication state
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState<boolean>(false);
   
   // State for news articles
   const [news, setNews] = useState<NewsArticle[]>([]);
@@ -43,22 +44,35 @@ export default function Home() {
   const interests = ['technology', 'science', 'business', 'entertainment', 'health', 'sports', 'politics'];
 
   // Check authentication status on page load
+  // In the useEffect for authentication check, update it to:
+  
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/session');
+        console.log('Checking authentication status...');
+        const response = await fetch('/api/auth/session', {
+          credentials: 'include', // Important: include credentials in the request
+          cache: 'no-store', // Prevent caching
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
         
         if (!response.ok) {
           console.error('Session API returned error:', response.status);
-          // Load default preferences from localStorage instead of redirecting
+          setIsLoggedIn(false);
+          setUser(null);
           loadDefaultPreferences();
           return;
         }
         
         const data = await response.json();
+        console.log('Session data received:', data); // Debug log
         
         if (data.user) {
           // User is authenticated
+          console.log('User authenticated:', data.user); // Debug log
           setIsLoggedIn(true);
           setUser(data.user);
           
@@ -71,17 +85,20 @@ export default function Home() {
             setUserPreferences(defaultPreferences);
           }
         } else {
-          // No authenticated user, but don't redirect immediately
-          // Just load default preferences from localStorage
+          // No authenticated user
+          console.log('No authenticated user found');
+          setIsLoggedIn(false);
+          setUser(null);
           loadDefaultPreferences();
         }
       } catch (error) {
         console.error('Error checking authentication:', error);
-        // Load default preferences from localStorage instead of redirecting
+        setIsLoggedIn(false);
+        setUser(null);
         loadDefaultPreferences();
       } finally {
-        // Always set loading to false after authentication check
         setIsLoading(false);
+        setAuthChecked(true);
       }
     };
     
@@ -99,7 +116,7 @@ export default function Home() {
     };
     
     checkAuth();
-  }, [router]);
+  }, [router.asPath]); // Use router.asPath to detect all route changes
 
   // Save preferences when they change
   useEffect(() => {
