@@ -1,6 +1,6 @@
 // lib/auth.js
 import { sign, verify } from 'jsonwebtoken';
-import cookie from 'cookie';
+import * as cookie from 'cookie';
 
 // Use a strong secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-jwt-secret-at-least-32-chars';
