@@ -7,10 +7,31 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model User {
+  id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  email             String           @unique
+  password          String
+  name              String?
+  role              String           @default("user") // "user" or "admin"
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  preferences       UserPreferences?
+}
+
 model UserPreferences {
   id                    String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                String
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id])
   interests             String[]  // Array of strings representing user interests
   preferencesTimestamp  DateTime @default(now())
   newsCategory          String[]  // Array to track preferred news categories
+}
+
+model UserAnalytics {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String
+  categoryViews     Json     // Store category view counts as JSON
+  articleClicks     Int      @default(0)
+  lastActive        DateTime @default(now())
+  sessionCount      Int      @default(0)
 }
