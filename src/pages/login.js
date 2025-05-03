@@ -1,5 +1,5 @@
 // pages/login.js
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
 
@@ -8,6 +8,21 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // Check for dark mode on component mount
+  useEffect(() => {
+    // Check if user prefers dark mode
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setIsDarkMode(prefersDark);
+    
+    // Listen for changes in color scheme preference
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e) => setIsDarkMode(e.matches);
+    mediaQuery.addEventListener('change', handleChange);
+    
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,10 +42,6 @@ export default function Login() {
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
       }
-  
-      // In the handleSubmit function
-      // In the handleSubmit function, after successful login:
-      // In the handleSubmit function, update the redirect code:
   
       console.log('Login successful, redirecting');
   
@@ -57,7 +68,7 @@ export default function Login() {
         <title>Login | News Dashboard</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </Head>
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className={`min-h-screen flex flex-col ${isDarkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'}`}>
         {/* Header/Logo Area */}
         <div className="w-full p-6 flex justify-center">
           <div className="flex items-center">
@@ -66,16 +77,16 @@ export default function Login() {
                 <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 ml-3">News Admin</h1>
+            <h1 className={`text-2xl font-bold ml-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>News Admin</h1>
           </div>
         </div>
 
         {/* Login Form */}
         <div className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8">
-          <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-xl transition-all duration-300">
+          <div className={`max-w-md w-full space-y-8 p-8 rounded-xl shadow-xl transition-all duration-300 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
             <div>
-              <h2 className="mt-4 text-center text-3xl font-extrabold text-gray-900">Welcome back</h2>
-              <p className="mt-2 text-center text-sm text-gray-600">
+              <h2 className={`mt-4 text-center text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Welcome back</h2>
+              <p className={`mt-2 text-center text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 Sign in to access your account
               </p>
             </div>
@@ -94,7 +105,7 @@ export default function Login() {
             <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
               <div className="rounded-md -space-y-px">
                 <div className="mb-5">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="email" className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                     Email address
                   </label>
                   <div className="relative rounded-md shadow-sm">
@@ -111,14 +122,18 @@ export default function Login() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none transition-colors duration-200"
+                      className={`focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none transition-colors duration-200 ${
+                        isDarkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                      }`}
                       placeholder="Email address"
                     />
                   </div>
                 </div>
                 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="password" className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                     Password
                   </label>
                   <div className="relative rounded-md shadow-sm">
@@ -135,7 +150,11 @@ export default function Login() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none transition-colors duration-200"
+                      className={`focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none transition-colors duration-200 ${
+                        isDarkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                      }`}
                       placeholder="Password"
                     />
                   </div>
@@ -150,7 +169,7 @@ export default function Login() {
                     type="checkbox"
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                  <label htmlFor="remember-me" className={`ml-2 block text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     Remember me
                   </label>
                 </div>
@@ -184,7 +203,7 @@ export default function Login() {
             </form>
             
             <div className="text-center mt-6">
-              <p className="text-sm text-gray-600">
+              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 Don't have an account?{' '}
                 <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200">
                   Sign up
