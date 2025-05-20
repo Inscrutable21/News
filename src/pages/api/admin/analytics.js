@@ -156,7 +156,7 @@ export default async function handler(req, res) {
     // Sort by user count
     interestCorrelations.sort((a, b) => b.userCount - a.userCount);
 
-    // Get all users to match with analytics
+    // Get all users
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -167,12 +167,25 @@ export default async function handler(req, res) {
       }
     });
 
-    // Combine user data with analytics data
-    const userAnalyticsWithUserInfo = userAnalytics.map(analytic => {
-      const user = users.find(u => u.id === analytic.userId);
+    // Create a map of user analytics by userId for easier lookup
+    const analyticsMap = {};
+    userAnalytics.forEach(analytic => {
+      analyticsMap[analytic.userId] = analytic;
+    });
+
+    // Combine all users with their analytics data (or empty analytics if none exists)
+    const userAnalyticsWithUserInfo = users.map(user => {
+      const analytics = analyticsMap[user.id] || {
+        userId: user.id,
+        categoryViews: {},
+        articleClicks: 0,
+        lastActive: user.createdAt,
+        sessionCount: 0
+      };
+      
       return {
-        ...analytic,
-        user: user || null
+        ...analytics,
+        user: user
       };
     });
 

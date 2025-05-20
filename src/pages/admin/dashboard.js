@@ -3,48 +3,58 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 
 // Helper functions defined outside the component
-function calculateAlignmentScore(user) {
-  if (!user.user?.preferences?.interests || !user.categoryViews) return 0;
+function calculateAlignmentScore(userAnalytic) {
+  if (!userAnalytic.user?.preferences?.interests || 
+      !userAnalytic.categoryViews || 
+      Object.keys(userAnalytic.categoryViews).length === 0) {
+    return 0;
+  }
   
-  const interests = user.user.preferences.interests;
-  const categoryViews = user.categoryViews;
+  const interests = userAnalytic.user.preferences.interests;
+  const categories = Object.keys(userAnalytic.categoryViews);
   
-  let alignedViews = 0;
-  let totalViews = 0;
+  // Count how many of the user's top 3 categories match their interests
+  const topCategories = Object.entries(userAnalytic.categoryViews)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(entry => entry[0]);
   
-  Object.entries(categoryViews).forEach(([category, count]) => {
-    totalViews += count;
+  let matchCount = 0;
+  topCategories.forEach(category => {
     if (interests.includes(category)) {
-      alignedViews += count;
+      matchCount++;
     }
   });
   
-  return totalViews > 0 ? Math.round((alignedViews / totalViews) * 100) : 0;
+  // Calculate score based on matches (0-100)
+  return Math.round((matchCount / Math.min(3, topCategories.length)) * 100);
 }
 
-function isAlignmentGood(user) {
-  return calculateAlignmentScore(user) >= 60;
+function isAlignmentGood(userAnalytic) {
+  return calculateAlignmentScore(userAnalytic) >= 60;
 }
 
-function getMostReadCategory(user) {
-  if (!user.categoryViews) return 'None';
+function getMostReadCategory(userAnalytic) {
+  if (!userAnalytic.categoryViews || Object.keys(userAnalytic.categoryViews).length === 0) {
+    return 'None';
+  }
   
-  const entries = Object.entries(user.categoryViews);
-  if (entries.length === 0) return 'None';
+  const sortedCategories = Object.entries(userAnalytic.categoryViews)
+    .sort((a, b) => b[1] - a[1]);
   
-  return entries.sort((a, b) => b[1] - a[1])[0][0];
+  return sortedCategories.length > 0 ? sortedCategories[0][0] : 'None';
 }
 
-function getRecommendation(user) {
-  const score = calculateAlignmentScore(user);
-  const mostRead = getMostReadCategory(user);
-  const interests = user.user?.preferences?.interests || [];
+function getRecommendation(userAnalytic) {
+  const score = calculateAlignmentScore(userAnalytic);
+  const mostRead = getMostReadCategory(userAnalytic);
+  const interests = userAnalytic.user?.preferences?.interests || [];
   
   if (score < 40) {
     return `Consider suggesting more content from their selected interests: ${interests.join(', ')}`;
   } else if (score > 80) {
     return `This user has strong alignment with their interests. Consider suggesting some content outside their comfort zone for variety.`;
-  } else if (!interests.includes(mostRead) && Object.values(user.categoryViews || {})[0] > 10) {
+  } else if (!interests.includes(mostRead) && Object.values(userAnalytic.categoryViews || {})[0] > 10) {
     return `Consider suggesting they add "${mostRead}" to their interests since they read it frequently.`;
   } else {
     return `This user has a balanced reading pattern.`;
@@ -398,7 +408,7 @@ export default function Dashboard() {
                             <div className="text-sm text-gray-500">{userAnalytic.user?.email || 'No email'}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {userAnalytic.lastActive ? new Date(userAnalytic.lastActive).toLocaleDateString() : 'Never'}
+                            {userAnalytic.lastActive ? new Date(userAnalytic.lastActive).toLocaleString() : 'Never'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {userAnalytic.sessionCount || 0}
@@ -407,13 +417,12 @@ export default function Dashboard() {
                             {getMostReadCategory(userAnalytic)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                              ${isAlignmentGood(userAnalytic) ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            <div className="text-sm text-gray-500">
                               {calculateAlignmentScore(userAnalytic)}%
-                            </span>
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <button 
+                            <button
                               onClick={() => setSelectedUser(userAnalytic)}
                               className="text-blue-600 hover:text-blue-900"
                             >
