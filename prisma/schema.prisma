@@ -16,11 +16,14 @@ model User {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   preferences       UserPreferences?
+  analytics         UserAnalytics?
+  articleClicks     ArticleClick[]
+  interactions      UserInteraction[]
 }
 
 model UserPreferences {
   id                    String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                String   @unique
+  userId                String   @unique @db.ObjectId
   user                  User     @relation(fields: [userId], references: [id])
   interests             String[]  // Array of strings representing user interests
   preferencesTimestamp  DateTime @default(now())
@@ -29,9 +32,34 @@ model UserPreferences {
 
 model UserAnalytics {
   id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String
+  userId            String   @db.ObjectId @unique
   categoryViews     Json     // Store category view counts as JSON
   articleClicks     Int      @default(0)
   lastActive        DateTime @default(now())
   sessionCount      Int      @default(0)
+  user              User?    @relation(fields: [userId], references: [id])
 }
+
+model UserInteraction {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  action      String   // Type of interaction (view, click, etc.)
+  details     String   // JSON string with interaction details
+  timestamp   DateTime @default(now())
+  category    String?  // Optional category of content interacted with
+  articleId   String?  // Optional ID of article if applicable
+}
+
+model ArticleClick {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  title       String
+  url         String?
+  category    String
+  clickedAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+
+

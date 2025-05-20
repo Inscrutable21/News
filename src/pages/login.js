@@ -28,7 +28,7 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-  
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -36,24 +36,33 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
         credentials: 'include'
       });
-  
+
       const data = await response.json();
-  
+
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
       }
-  
+
       console.log('Login successful, redirecting');
-  
+
+      // Check for redirect parameter in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectPath = urlParams.get('redirect');
+
       // Add a small delay to ensure cookies are set
       setTimeout(() => {
         if (data.role === 'admin') {
-          window.location.href = '/admin/dashboard';
+          // If there's a redirect parameter and the user is admin, use it
+          if (redirectPath && redirectPath.startsWith('/admin')) {
+            window.location.href = redirectPath;
+          } else {
+            window.location.href = '/admin/dashboard';
+          }
         } else {
-          // Force a full page reload to ensure fresh state
+          // For non-admin users or if no redirect is specified
           window.location.href = '/';
         }
-      }, 100);
+      }, 300); // Increased delay to ensure cookies are properly set
     } catch (error) {
       console.error('Login error:', error);
       setError(error.message);

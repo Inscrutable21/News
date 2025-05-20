@@ -52,10 +52,13 @@ export default function Home() {
   const [userPreferences, setUserPreferences] = useState<string[]>(['technology', 'business']);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   
+  // Add this line with your other state variables (around line 45)
   // Add these new state variables for 'For You' section
   const [forYouNews, setForYouNews] = useState<NewsArticle[]>([]);
   const [isLoadingForYou, setIsLoadingForYou] = useState<boolean>(false);
   const [recommendationInsights, setRecommendationInsights] = useState<RecommendationInsights | null>(null);
+  // Add this new state variable for analytics dashboard
+  const [showDetailedAnalytics, setShowDetailedAnalytics] = useState<boolean>(false);
   // Update viewMode type to include 'for-you'
   const [viewMode, setViewMode] = useState<'category' | 'personalized' | 'random' | 'for-you'>('personalized');
   
@@ -81,13 +84,17 @@ export default function Home() {
   const trackArticleClick = (article: NewsArticle) => {
     if (!isLoggedIn || !user) return;
     
+    console.log('Tracking article click:', article.title, article.category);
+    
     fetch('/api/track-activity', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: user.id,
         activityType: 'click',
-        category: article.category || 'unknown'
+        category: article.category || 'unknown',
+        articleTitle: article.title,
+        articleUrl: article.url
       })
     }).catch(error => console.error('Error tracking article click:', error));
   };
@@ -398,22 +405,24 @@ export default function Home() {
       </div>
       
       {/* User preferences section */}
-      <div className="preferencesSection mb-6">
-        <h2 className="text-lg font-semibold text-gray-700 mb-3">Your Interests</h2>
-        <div className="interestButtons flex flex-wrap gap-2">
-          {interests.map(interest => (
-            <button
-              key={interest}
-              className={`px-3 py-1 rounded-full text-xs ${userPreferences.includes(interest) 
-                ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'}`}
-              onClick={() => togglePreference(interest)}
-            >
-              {interest.charAt(0).toUpperCase() + interest.slice(1)}
-            </button>
-          ))}
+      {viewMode !== 'for-you' && (
+        <div className="preferencesSection mb-6">
+          <h2 className="text-lg font-semibold text-gray-700 mb-3">Your Interests</h2>
+          <div className="interestButtons flex flex-wrap gap-2">
+            {interests.map(interest => (
+              <button
+                key={interest}
+                className={`px-3 py-1 rounded-full text-xs ${userPreferences.includes(interest) 
+                  ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                  : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'}`}
+                onClick={() => togglePreference(interest)}
+              >
+                {interest.charAt(0).toUpperCase() + interest.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       
       {/* News display */}
       {viewMode !== 'for-you' ? (
@@ -531,96 +540,99 @@ export default function Home() {
             </h2>
             <p className="text-sm text-gray-600 mt-1">Based on your reading history and preferences</p>
             
-            {/* Add recommendation insights section */}
+            {/* Enhanced recommendation insights section with detailed analytics */}
             {recommendationInsights && (
-              <div className="mt-2 p-3 bg-purple-50 rounded-md border border-purple-100">
-                <h3 className="text-sm font-semibold text-purple-800">Why am I seeing these recommendations?</h3>
-                <p className="text-xs text-purple-700 mt-1">{recommendationInsights.reason}</p>
-                {recommendationInsights.topCategories && recommendationInsights.topCategories.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs text-purple-700">Top categories in your reading history:</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {recommendationInsights.topCategories.map((category, index) => (
-                        <span key={index} className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full">
-                          {category}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div className="mt-4 p-4 bg-purple-50 rounded-md border border-purple-100">
+                <div className="flex justify-between items-start">
+                  <h3 className="text-sm font-semibold text-purple-800">Your Personalization Insights</h3>
+                  <button 
+                    className="text-xs text-purple-700 hover:text-purple-900 flex items-center"
+                    onClick={() => setShowDetailedAnalytics(!showDetailedAnalytics)}
+                  >
+                    {showDetailedAnalytics ? 'Hide Details' : 'Show Details'}
+                    <svg className="w-4 h-4 ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      {showDetailedAnalytics 
+                        ? <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                        : <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      }
+                    </svg>
+                  </button>
+                </div>
+                
+                <p className="text-xs text-purple-700 mt-2">{recommendationInsights.reason}</p>
               </div>
             )}
           </div>
-          
-          {isLoadingForYou ? (
-            <div className="loadingState flex justify-center items-center p-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
-              <span className="ml-3 text-gray-600">Personalizing your feed...</span>
-            </div>
-          ) : (
-            <div className="newsContainer grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {forYouNews && forYouNews.length > 0 ? (
-                forYouNews.map((article, index) => (
-                  <div key={index} className="newsArticle flex flex-col bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                    {article.urlToImage ? (
-                      <div className="h-48 overflow-hidden">
-                        <img 
-                          src={article.urlToImage} 
-                          alt={article.title} 
-                          className="w-full h-full object-cover transition-transform hover:scale-105"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="h-48 bg-gray-100 flex items-center justify-center">
-                        <svg className="w-12 h-12 text-gray-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
-                          <circle cx="12" cy="10" r="3"></circle>
-                          <path d="M16.5 17.5c-1.5-2-8.5-2-10 0"></path>
-                        </svg>
-                      </div>
-                    )}
-                    <div className="articleContent flex-1 p-4">
-                      {article.source?.name && (
-                        <div className="articleSource text-xs font-semibold text-blue-600 mb-2">
-                          {article.source.name}
-                          {article.publishedAt && (
-                            <span className="text-gray-500 ml-2">
-                              {new Date(article.publishedAt).toLocaleDateString()}
-                            </span>
-                          )}
+            
+            {isLoadingForYou ? (
+              <div className="loadingState flex justify-center items-center p-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+                <span className="ml-3 text-gray-600">Personalizing your feed...</span>
+              </div>
+            ) : (
+              <div className="newsContainer grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {forYouNews && forYouNews.length > 0 ? (
+                  forYouNews.map((article, index) => (
+                    <div key={index} className="newsArticle flex flex-col bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                      {article.urlToImage ? (
+                        <div className="h-48 overflow-hidden">
+                          <img 
+                            src={article.urlToImage} 
+                            alt={article.title} 
+                            className="w-full h-full object-cover transition-transform hover:scale-105"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
                         </div>
-                      )}
-                      <h3 className="text-lg font-semibold mb-2 line-clamp-2">{article.title}</h3>
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-3">{article.description}</p>
-                      
-                      {/* Add recommendation reason */}
-                      {article.recommendationReason && (
-                        <div className="mb-3 text-xs text-purple-700 italic">
-                          <svg className="w-3 h-3 inline-block mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                      ) : (
+                        <div className="h-48 bg-gray-100 flex items-center justify-center">
+                          <svg className="w-12 h-12 text-gray-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
+                            <circle cx="12" cy="10" r="3"></circle>
+                            <path d="M16.5 17.5c-1.5-2-8.5-2-10 0"></path>
                           </svg>
-                          {article.recommendationReason}
                         </div>
                       )}
-                      
-                      <a 
-                        href={article.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="articleLink inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        onClick={() => trackArticleClick(article)}
-                      >
-                        Read more
-                        <svg className="w-4 h-4 ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <line x1="5" y1="12" x2="19" y2="12"></line>
-                          <polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                      </a>
+                      <div className="articleContent flex-1 p-4">
+                        {article.source?.name && (
+                          <div className="articleSource text-xs font-semibold text-blue-600 mb-2">
+                            {article.source.name}
+                            {article.publishedAt && (
+                              <span className="text-gray-500 ml-2">
+                                {new Date(article.publishedAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <h3 className="text-lg font-semibold mb-2 line-clamp-2">{article.title}</h3>
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-3">{article.description}</p>
+                        
+                        {/* Add recommendation reason */}
+                        {article.recommendationReason && (
+                          <div className="mb-3 text-xs text-purple-700 italic">
+                            <svg className="w-3 h-3 inline-block mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            </svg>
+                            {article.recommendationReason}
+                          </div>
+                        )}
+                        
+                        <a 
+                          href={article.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="articleLink inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          onClick={() => trackArticleClick(article)}
+                        >
+                          Read more
+                          <svg className="w-4 h-4 ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                          </svg>
+                        </a>
+                      </div>
                     </div>
-                  </div>
                 ))
               ) : (
                 <div className="noNewsMessage col-span-full py-12 text-center bg-gray-50 rounded-lg border border-gray-200">

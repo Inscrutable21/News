@@ -22,7 +22,7 @@ export function setAuthCookie(res, user) {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 7 * 1000, // 7 days in milliseconds
     path: '/',
     sameSite: 'lax',
   };
@@ -30,7 +30,7 @@ export function setAuthCookie(res, user) {
   // Set the cookie
   res.setHeader('Set-Cookie', cookie.serialize('auth-token', token, cookieOptions));
   
-  console.log('Auth cookie set for user:', user.email);
+  console.log('Auth cookie set for user:', user.email, 'with role:', user.role);
 }
 
 export function getAuthUser(req) {
